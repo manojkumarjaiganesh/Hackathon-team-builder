@@ -1,7 +1,12 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useContext } from "react";
 import API from "../api/axios";
 
 const AuthContext = createContext();
+
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -28,7 +33,7 @@ export function AuthProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, []); // ✅ No stray "} [];" here
+  }, []);
 
   const login = async (email, password) => {
     const res = await API.post("/auth/login", { email, password });
@@ -52,4 +57,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-} // ✅ AuthProvider closes here
+}
