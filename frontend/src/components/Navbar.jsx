@@ -12,34 +12,68 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center justify-between">
-      <Link to="/" className="text-xl font-bold text-cyan-400 flex items-center gap-2">
-        <Layers size={22} /> HackTeam
+    <nav style={{
+      position: 'fixed', top: 0, width: '100%', zIndex: 50,
+      background: '#1a2a6c', borderBottom: '1px solid #1e3a8a',
+      padding: '0 32px', height: 56,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+    }}>
+      {/* Logo */}
+      <Link to="/" style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        color: '#38bdf8', fontWeight: 700, fontSize: 16, textDecoration: 'none'
+      }}>
+        <Layers size={20} /> HackTeam
       </Link>
 
-      <div className="flex items-center gap-4">
-        <Link to="/projects" className="text-sm text-gray-300 hover:text-white transition">Browse Teams</Link>
+      {/* Nav Links */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
 
+        {/* ✅ This is the key line — must be Link to="/projects" */}
+        <Link to="/projects" style={{
+          color: '#cbd5e1', fontSize: 13, textDecoration: 'none'
+        }}>
+          Browse Projects
+        </Link>
+<Link to="/how-it-works" style={{ color: '#cbd5e1', fontSize: 13, textDecoration: 'none' }}>
+  How It Works
+</Link>
         {user ? (
           <>
-            <Link to="/create-project"
-              className="flex items-center gap-1 text-sm bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-3 py-1.5 rounded-lg transition">
-              <Plus size={16} /> New Project
+            <Link to="/create-project" style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: '#0ea5e9', color: '#fff',
+              fontSize: 13, fontWeight: 600,
+              padding: '6px 14px', borderRadius: 7, textDecoration: 'none'
+            }}>
+              <Plus size={15} /> New Project
             </Link>
-            <Link to={`/profile/${user._id}`}
-              className="flex items-center gap-1 text-sm text-gray-300 hover:text-white">
-              <User size={16} /> {user.name.split(' ')[0]}
+
+            <Link to={`/profile/${user._id}`} style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              color: '#cbd5e1', fontSize: 13, textDecoration: 'none'
+            }}>
+              <User size={15} /> {user.name.split(' ')[0]}
             </Link>
-            <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition">
-              <LogOut size={18} />
+
+            <button onClick={handleLogout} style={{
+              background: 'none', border: 'none',
+              color: '#94a3b8', cursor: 'pointer'
+            }}>
+              <LogOut size={17} />
             </button>
           </>
         ) : (
           <>
-            <Link to="/login"    className="text-sm text-gray-300 hover:text-white">Login</Link>
-            <Link to="/register" className="text-sm bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-3 py-1.5 rounded-lg">
-              Sign Up
-            </Link>
+            <Link to="/login" style={{
+              color: '#cbd5e1', fontSize: 13, textDecoration: 'none'
+            }}>Login</Link>
+
+            <Link to="/register" style={{
+              background: '#0ea5e9', color: '#fff',
+              fontSize: 13, fontWeight: 600,
+              padding: '6px 14px', borderRadius: 7, textDecoration: 'none'
+            }}>Join Now</Link>
           </>
         )}
       </div>
