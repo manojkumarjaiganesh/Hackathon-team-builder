@@ -1,10 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LogOut, User, Plus, Layers, Menu, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { LogOut, User, Plus, Layers, Menu, X, Settings, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
   * { box-sizing: border-box; }
 
@@ -64,11 +64,11 @@ const styles = `
   }
 
   /* Desktop nav */
-  .ht-links { display: flex; align-items: center; gap: 6px; }
+  .ht-links { display: flex; align-items: center; gap: 8px; }
 
   .ht-link {
-    color: #94a3b8; font-size: 13.5px; font-weight: 500;
-    text-decoration: none; padding: 6px 12px; border-radius: 8px;
+    color: #94a3b8; font-size: 14px; font-weight: 500;
+    text-decoration: none; padding: 6px 14px; border-radius: 9px;
     letter-spacing: 0.01em;
     transition: color 0.2s, background 0.2s;
   }
@@ -76,59 +76,134 @@ const styles = `
 
   .ht-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.08); margin: 0 4px; }
 
-  /* User chip */
-  .ht-user {
-    display: flex; align-items: center; gap: 6px;
-    color: #cbd5e1; font-size: 13.5px; font-weight: 500;
-    text-decoration: none;
-    padding: 5px 10px 5px 6px; border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.07);
-    background: rgba(255,255,255,0.04);
-    transition: all 0.2s;
+  /* New User Container & Dropdown */
+  .ht-user-container {
+    position: relative;
+    display: flex;
+    align-items: center;
   }
-  .ht-user:hover { border-color: rgba(56,189,248,0.25); background: rgba(56,189,248,0.07); color: #e2e8f0; }
+
+  .ht-user-trigger {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 4px 10px 4px 4px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #cbd5e1;
+  }
+
+  .ht-user-trigger:hover {
+    border-color: rgba(56,189,248,0.3);
+    background: rgba(255,255,255,0.06);
+  }
 
   .ht-user-avatar {
-    width: 24px; height: 24px; border-radius: 50%;
+    width: 28px; height: 28px; border-radius: 50%;
     background: linear-gradient(135deg, #38bdf8, #6366f1);
     display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-family: 'Syne', sans-serif; font-weight: 700; color: #fff;
+    font-size: 11px; font-family: 'Syne', sans-serif; font-weight: 800; color: #fff;
     flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(56,189,248,0.2);
   }
 
-  /* Logout */
-  .ht-logout {
-    background: none; border: none; color: #64748b; cursor: pointer;
-    padding: 7px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    transition: color 0.2s, background 0.2s;
+  .ht-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 220px;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transform: translateY(10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1001;
   }
-  .ht-logout:hover { color: #f87171; background: rgba(248,113,113,0.08); }
+
+  .ht-dropdown-menu.open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .ht-dropdown-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 4px;
+  }
+
+  .ht-dropdown-name {
+    display: block;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .ht-dropdown-email {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .ht-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 10px;
+    transition: all 0.2s;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .ht-dropdown-item:hover {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+  }
+
+  .ht-dropdown-item.logout:hover {
+    background: rgba(248, 113, 113, 0.08);
+    color: #f87171;
+  }
 
   /* CTA buttons */
   .ht-btn-primary {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
-    color: #fff; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #fff;
+    color: #030711; font-size: 14px; font-weight: 700;
     font-family: 'DM Sans', sans-serif;
-    padding: 7px 16px; border-radius: 9px;
+    padding: 8px 18px; border-radius: 10px;
     text-decoration: none; letter-spacing: 0.01em;
-    box-shadow: 0 0 0 0 rgba(14,165,233,0);
-    transition: opacity 0.2s, box-shadow 0.2s, transform 0.15s;
-    position: relative; overflow: hidden;
+    transition: all 0.2s;
   }
-  .ht-btn-primary::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
-    opacity: 0; transition: opacity 0.2s;
+  .ht-btn-primary:hover { 
+    background: #f1f5f9;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
   }
-  .ht-btn-primary:hover { box-shadow: 0 0 20px rgba(14,165,233,0.4); transform: translateY(-1px); }
-  .ht-btn-primary:hover::before { opacity: 1; }
 
   .ht-btn-outline {
     display: inline-flex; align-items: center;
-    color: #94a3b8; font-size: 13.5px; font-weight: 500;
-    text-decoration: none; padding: 6px 12px; border-radius: 8px;
+    color: #94a3b8; font-size: 14px; font-weight: 500;
+    text-decoration: none; padding: 7px 16px; border-radius: 10px;
     transition: color 0.2s, background 0.2s;
   }
   .ht-btn-outline:hover { color: #e2e8f0; background: rgba(255,255,255,0.05); }
@@ -212,30 +287,48 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    
+    // Close dropdown on click outside
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
-  const close = () => setMenuOpen(false);
+  const close = () => {
+    setMenuOpen(false);
+    setDropdownOpen(false);
+  };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
     close();
   };
 
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((w) => w[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "?";
+  const displayName = user?.displayName || user?.name || "Member";
+  const email = user?.email || "";
+  
+  const initials = displayName
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <>
@@ -261,20 +354,35 @@ export default function Navbar() {
           <div className="ht-divider" />
           {user ? (
             <>
-              <Link to="/create-project" className="ht-btn-primary">
-                <Plus size={14} /> New Project
+              <Link to="/create-project" className="ht-link" style={{ marginRight: 8 }}>
+                <Plus size={16} /> New Project
               </Link>
-              <Link to={`/profile/${user._id}`} className="ht-user">
-                <span className="ht-user-avatar">{initials}</span>
-                {user?.name?.split(" ")[0]}
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="ht-logout"
-                title="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
+              
+              <div className="ht-user-container" ref={dropdownRef}>
+                <button 
+                  className="ht-user-trigger" 
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                >
+                  <span className="ht-user-avatar">{initials}</span>
+                  <ChevronDown size={14} style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+
+                <div className={`ht-dropdown-menu ${dropdownOpen ? 'open' : ''}`}>
+                  <div className="ht-dropdown-header">
+                    <span className="ht-dropdown-name">{displayName}</span>
+                    <span className="ht-dropdown-email">{email}</span>
+                  </div>
+                  <Link to={`/profile/${user.uid || user._id}`} className="ht-dropdown-item" onClick={close}>
+                    <User size={16} /> Account settings
+                  </Link>
+                  <Link to="/settings" className="ht-dropdown-item" onClick={close}>
+                    <Settings size={16} /> Preferences
+                  </Link>
+                  <button onClick={handleLogout} className="ht-dropdown-item logout">
+                    <LogOut size={16} /> Sign out
+                  </button>
+                </div>
+              </div>
             </>
           ) : (
             <>
@@ -310,7 +418,7 @@ export default function Navbar() {
         {user ? (
           <>
             <Link
-              to={`/profile/${user._id}`}
+              to={`/profile/${user.uid || user._id}`}
               className="ht-drawer-link"
               onClick={close}
             >
@@ -320,12 +428,16 @@ export default function Navbar() {
               >
                 {initials}
               </span>
-              {user?.name}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{displayName}</span>
+                <span style={{ fontSize: 11, color: '#64748b' }}>View profile</span>
+              </div>
             </Link>
             <Link
               to="/create-project"
               className="ht-drawer-btn"
               onClick={close}
+              style={{ marginTop: 12 }}
             >
               <Plus size={16} /> New Project
             </Link>
