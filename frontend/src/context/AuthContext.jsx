@@ -1,8 +1,14 @@
 import { createContext, useState, useEffect, useContext } from "react";
-import API from "../api/axios";
+import { auth } from "../firebase";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  updateProfile
+} from "firebase/auth";
 
 const AuthContext = createContext();
-
 
 export const useAuth = () => {
   return useContext(AuthContext);
@@ -10,51 +16,43 @@ export const useAuth = () => {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(!localStorage.getItem("token"));
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    // Listen for authentication state changes
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
 
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      API.get("/users/me")
-        .then((res) => {
-          if (isMounted) setUser(res.data);
-        })
-        .catch(() => {
-          if (isMounted) localStorage.removeItem("token");
-        })
-        .finally(() => {
-          if (isMounted) setLoading(false);
-        });
-    }
-
-    return () => {
-      isMounted = false;
-    };
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   const login = async (email, password) => {
-    const res = await API.post("/auth/login", { email, password });
-    localStorage.setItem("token", res.data.token);
-    setUser(res.data.user);
+    return signInWithEmailAndPassword(auth, email, password);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
+    return signOut(auth);
   };
 
-  const register = async (formData) => {
-    const res = await API.post("/auth/register", formData);
-    localStorage.setItem("token", res.data.token);
-    setUser(res.data.user);
+  const register = async ({ name, email, password }) => {
+    // 1. Create the user
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // 2. Update the profile with the display name
+    await updateProfile(userCredential.user, {
+      displayName: name
+    });
+
+    // 3. Return the user credential to match expectations
+    return userCredential;
   };
 
   return (
     <AuthContext.Provider value={{ user, login, logout, register, loading }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

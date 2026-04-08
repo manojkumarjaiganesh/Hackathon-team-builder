@@ -21,7 +21,7 @@ export default function Register() {
       toast.success("Account created successfully!");
       navigate("/");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Registration failed");
+      toast.error(error.message || "Registration failed");
     } finally {
       setLoading(false);
     }
