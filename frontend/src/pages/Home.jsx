@@ -32,20 +32,6 @@ export default function Home() {
 
   return (
     <div className="home-wrap">
-      {/* TICKER */}
-      <div className="ticker-wrap">
-        <div className="ticker">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="ticker-item">
-              <span>🚀 10,000+ Hackers</span>
-              <span>🏆 $2.5M Prize Pools</span>
-              <span>🌎 Global Community</span>
-              <span>💻 500+ Projects Built</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* HERO SECTION */}
       <section className="home-hero">
         <div className="home-hero-text">
