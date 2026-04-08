@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import './HowItWorks.css';
 
 const STEPS = [
   {
+    id: 'step-1',
     num: 1,
     numBg: '#2563eb',
     title: 'Discover Projects',
-    desc: 'Browse and find exciting hackathons that match your skills and interests.',
+    desc: 'Browse and find exciting hackathons that match your skills and interests. From AI to Blockchain, there is something for everyone who wants to build the future.',
     btnLabel: 'Browse Hackathons',
     btnBg: '#2563eb',
     btnLink: '/projects',
@@ -32,10 +35,11 @@ const STEPS = [
     ),
   },
   {
+    id: 'step-2',
     num: 2,
     numBg: '#0d9488',
     title: 'Join or Create Teams',
-    desc: 'Team up with like-minded innovators or create your own team.',
+    desc: 'Team up with like-minded innovators or create your own team. Collaborate, share ideas, and build the future together. Finding the right talent has never been easier.',
     btnLabel: 'Find Teammates',
     btnBg: '#0d9488',
     btnLink: '/register',
@@ -59,10 +63,11 @@ const STEPS = [
     ),
   },
   {
+    id: 'step-3',
     num: 3,
     numBg: '#f97316',
     title: 'Compete & Win',
-    desc: 'Collaborate on your project, submit it, and compete for prizes.',
+    desc: 'Collaborate on your project, submit it, and compete for amazing prizes and recognition from industry leaders. Turn your hackathon project into a real startup.',
     btnLabel: 'Start Competing',
     btnBg: '#f97316',
     btnLink: '/create-project',
@@ -87,103 +92,106 @@ const STEPS = [
   },
 ];
 
+const SECTIONS = ['hero', 'step-1', 'step-2', 'step-3', 'cta'];
+
 export default function HowItWorks() {
+  const [activeSection, setActiveSection] = useState('hero');
+  const [isScrolling, setIsScrolling] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (isScrolling) return;
+
+      const scrollTop = container.scrollTop;
+      const height = container.clientHeight;
+      const index = Math.round(scrollTop / height);
+      
+      if (SECTIONS[index]) {
+        setActiveSection(SECTIONS[index]);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isScrolling]);
+
+  const scrollTo = (id) => {
+    const index = SECTIONS.indexOf(id);
+    if (index === -1) return;
+
+    setIsScrolling(true);
+    setActiveSection(id);
+    
+    containerRef.current.scrollTo({
+      top: index * containerRef.current.clientHeight,
+      behavior: 'smooth'
+    });
+
+    setTimeout(() => {
+      setIsScrolling(false);
+    }, 1000); // Wait for scroll animation to complete
+  };
+
   return (
-    <div style={{ background: '#eef2f7', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+    <div className="how-it-works-container" ref={containerRef}>
+      {/* SIDE DOTS */}
+      <div className="section-dots">
+        {SECTIONS.map(id => (
+          <div 
+            key={id} 
+            className={`dot ${activeSection === id ? 'active' : ''}`}
+            onClick={() => scrollTo(id)}
+          />
+        ))}
+      </div>
 
-      {/* HERO */}
-      <section style={{
-        background: 'linear-gradient(135deg, #1a2a6c 0%, #1e40af 100%)',
-        padding: '52px 40px', textAlign: 'center', position: 'relative', overflow: 'hidden'
-      }}>
-        {/* Decorative circles */}
-        <div style={{ position: 'absolute', right: 60, top: 20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
-        <div style={{ position: 'absolute', right: 20, top: 60, width: 60,  height: 60,  borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-
-        <h1 style={{ color: '#fff', fontSize: 32, fontWeight: 700, marginBottom: 12, position: 'relative' }}>
-          How It Works
-        </h1>
-        <p style={{ color: '#bfdbfe', fontSize: 14, maxWidth: 480, margin: '0 auto', position: 'relative' }}>
-          Get started in just 3 simple steps to form your hackathon team and compete.
-        </p>
+      {/* HERO SECTION */}
+      <section className="snap-section how-hero" id="hero">
+        <div className="how-hero-content">
+          <span className="how-hero-tag">The Journey</span>
+          <h1>How <span>It Works</span></h1>
+          <p>
+            Get started in just 3 simple steps to form your hackathon dream team and build something extraordinary.
+          </p>
+        </div>
       </section>
 
-      {/* BODY */}
-      <div style={{ padding: '40px 40px 20px' }}>
-        <p style={{ textAlign: 'center', fontSize: 14, color: '#374151', fontWeight: 500, marginBottom: 28 }}>
-          Ready to join exciting hackathons and form the perfect team? Just follow these steps:
-        </p>
-
-        {/* STEP CARDS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 20, marginBottom: 36 }}>
-          {STEPS.map(step => (
-            <div key={step.num} style={{
-              background: '#fff', borderRadius: 14,
-              border: '1px solid #e2e8f0', padding: '24px 22px'
-            }}>
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  background: step.numBg, display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0
-                }}>{step.num}</div>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{step.title}</span>
+      {/* STEPS SECTIONS */}
+      {STEPS.map(step => (
+        <section key={step.id} className="snap-section step-section" id={step.id}>
+          <div className="step-content">
+            <div className="step-text">
+              <div className="step-badge" style={{ background: step.numBg }}>
+                {step.num}
               </div>
-
-              {/* Top desc */}
-              <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.6, marginBottom: 16 }}>
-                {step.desc}
-              </p>
-
-              {/* Illustration */}
-              <div style={{
-                width: '100%', height: 130, borderRadius: 10,
-                background: step.illBg, marginBottom: 16,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
-              }}>
-                {step.illustration}
-              </div>
-
-              {/* Bottom desc */}
-              <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.6, marginBottom: 18 }}>
-                {step.desc}
-              </p>
-
-              {/* Button */}
-              <Link to={step.btnLink} style={{
-                display: 'block', width: '100%', background: step.btnBg,
-                color: '#fff', border: 'none', borderRadius: 7,
-                padding: '10px 0', fontSize: 13, fontWeight: 600,
-                textAlign: 'center', textDecoration: 'none', cursor: 'pointer'
-              }}>
+              <h2 className="step-title">{step.title}</h2>
+              <p className="step-desc">{step.desc}</p>
+              <Link to={step.btnLink} className="step-btn" style={{ background: step.btnBg }}>
                 {step.btnLabel}
               </Link>
             </div>
-          ))}
-        </div>
+            <div className="step-visual">
+              <div className="step-illustration" style={{ background: step.illBg }}>
+                {step.illustration}
+              </div>
+            </div>
+          </div>
+        </section>
+      ))}
 
-        {/* CTA BANNER */}
-        <div style={{
-          background: 'linear-gradient(135deg, #1a2a6c, #1e40af)',
-          borderRadius: 14, padding: '36px 40px',
-          textAlign: 'center', marginBottom: 40
-        }}>
-          <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
-            Join Now and start building your hackathon dream team today!
-          </h2>
-          <Link to="/register" style={{
-            display: 'inline-block', background: '#f97316',
-            color: '#fff', border: 'none', borderRadius: 8,
-            padding: '12px 40px', fontSize: 14, fontWeight: 700,
-            textDecoration: 'none', cursor: 'pointer'
-          }}>
-            Join Now
+      {/* CTA SECTION */}
+      <section className="snap-section cta-banner" id="cta">
+        <div className="cta-content">
+          <h2>Ready to Build the Future with Your Dream Team?</h2>
+          <Link to="/register" className="cta-btn">
+            Join the Community
           </Link>
         </div>
-      </div>
-
+      </section>
     </div>
   );
 }
