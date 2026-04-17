@@ -100,13 +100,21 @@ export default function Profile() {
 
   const handleToggleHackathonMode = async (hackId, currentMode) => {
     if (!isOwner) return;
-    const newMode = currentMode === 'Online' ? 'Offline' : 'Online';
+    
+    const isCurrentlyOnline = currentMode?.toLowerCase() === 'online';
+    const newMode = isCurrentlyOnline ? 'Offline' : 'Online';
+    
+    // Optimistic UI Update: update state immediately for "instant" feel
+    setHackathons(prev => prev.map(h => h.id === hackId ? { ...h, mode: newMode } : h));
+    
     try {
       await updateDoc(doc(db, 'hackathons', hackId), { mode: newMode });
       toast.success(`Hackathon is now ${newMode}`);
     } catch (err) {
-      console.error('Update error:', err);
-      toast.error('Failed to change mode');
+      // Revert if the database update fails
+      setHackathons(prev => prev.map(h => h.id === hackId ? { ...h, mode: currentMode } : h));
+      console.error('[Profile] Toggle mode error:', err);
+      toast.error('Failed to change mode. Check connection.');
     }
   };
 
@@ -225,16 +233,25 @@ export default function Profile() {
                       <div className="pf-hack-banner-overlay" />
                       
                       {isOwner ? (
-                        <button 
-                          className={`pf-mode-pill pf-mode-toggle-btn ${h.mode === 'Online' ? 'online' : 'offline'}`}
-                          onClick={() => handleToggleHackathonMode(h.id, h.mode)}
-                          title="Click to toggle mode"
-                        >
-                          {h.mode === 'Online' ? <Wifi size={10} /> : <WifiOff size={10} />} {h.mode}
-                        </button>
+                        <div className="pf-mode-toggle-wrap" onClick={(e) => e.stopPropagation()}>
+                          <span className={`pf-mode-label ${h.mode?.toLowerCase() === 'online' ? 'online' : 'offline'}`}>
+                            {h.mode?.toLowerCase() === 'online' ? <Wifi size={12} /> : <WifiOff size={12} />} {h.mode}
+                          </span>
+                          <label className="pf-switch" title={`Set to ${h.mode?.toLowerCase() === 'online' ? 'Offline' : 'Online'}`}>
+                            <input 
+                              type="checkbox" 
+                              checked={h.mode?.toLowerCase() === 'online'} 
+                              onChange={(e) => {
+                                // We use the current h.mode to determine the next state
+                                handleToggleHackathonMode(h.id, h.mode);
+                              }}
+                            />
+                            <span className="pf-slider round"></span>
+                          </label>
+                        </div>
                       ) : (
-                        <span className={`pf-mode-pill ${h.mode === 'Online' ? 'online' : 'offline'}`}>
-                          {h.mode === 'Online' ? <Wifi size={10} /> : <WifiOff size={10} />} {h.mode}
+                        <span className={`pf-mode-pill ${h.mode?.toLowerCase() === 'online' ? 'online' : 'offline'}`}>
+                          {h.mode?.toLowerCase() === 'online' ? <Wifi size={10} /> : <WifiOff size={10} />} {h.mode}
                         </span>
                       )}
                       
