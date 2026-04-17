@@ -12,6 +12,8 @@ import Projects from "./pages/Projects";
 import HowItWorks from "./pages/HowItWorks";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import CreateHackathon from "./pages/CreateHackathon";
+import EditHackathon from "./pages/EditHackathon";
 
 export default function App() {
   return (
@@ -34,6 +36,8 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/profile/edit" element={<EditProfile />} />
             <Route path="/create-project" element={<CreateProject />} />
+            <Route path="/create-hackathon" element={<CreateHackathon />} />
+            <Route path="/edit-hackathon/:id" element={<EditHackathon />} />
           </Route>
         </Routes>
       </main>

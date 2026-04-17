@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LogOut, User, Plus, Layers, Menu, X, Settings, ChevronDown } from "lucide-react";
+import { LogOut, User, Plus, Layers, Menu, X, Settings, ChevronDown, Rocket } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 const styles = `
@@ -354,6 +354,9 @@ export default function Navbar() {
           <div className="ht-divider" />
           {user ? (
             <>
+              <Link to="/create-hackathon" className="ht-link">
+                <Rocket size={16} /> Host Hackathon
+              </Link>
               <Link to="/create-project" className="ht-link" style={{ marginRight: 8 }}>
                 <Plus size={16} /> New Project
               </Link>
@@ -434,10 +437,18 @@ export default function Navbar() {
               </div>
             </Link>
             <Link
-              to="/create-project"
+              to="/create-hackathon"
               className="ht-drawer-btn"
               onClick={close}
               style={{ marginTop: 12 }}
+            >
+              <Rocket size={16} /> Host Hackathon
+            </Link>
+            <Link
+              to="/create-project"
+              className="ht-drawer-btn"
+              onClick={close}
+              style={{ marginTop: 8, background: 'rgba(255,255,255,0.07)' }}
             >
               <Plus size={16} /> New Project
             </Link>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import API from '../api/axios';
+import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Rocket, Tag, Users, Type } from 'lucide-react';
 import './CreateProject.css';
@@ -10,6 +12,7 @@ const ROLE_OPTIONS    = ['Frontend Dev','Backend Dev','Full-Stack','UI/UX Design
 
 export default function CreateProject() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [form, setForm] = useState({ title: '', description: '' });
   const [tags, setTags] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -47,10 +50,19 @@ export default function CreateProject() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await API.post('/projects', { ...form, tags, rolesNeeded: roles });
+      await addDoc(collection(db, 'projects'), {
+        title: form.title,
+        description: form.description,
+        tags,
+        rolesNeeded: roles,
+        creatorId: user?.uid || null,
+        creatorName: user?.displayName || user?.email || 'Anonymous',
+        createdAt: serverTimestamp(),
+      });
       toast.success('Project created successfully!');
-      navigate(`/projects/${res.data._id}`);
+      navigate('/projects');
     } catch (error) {
+      console.error('Firestore error:', error);
       toast.error('Failed to create project. Please try again.');
     } finally {
       setLoading(false);
@@ -68,23 +80,23 @@ export default function CreateProject() {
         <form onSubmit={handleSubmit} className="premium-form">
           <div className="form-group">
             <label className="form-label"><Type size={14} style={{ marginRight: 8 }} /> Project Title</label>
-            <input 
-              required 
+            <input
+              required
               className="premium-input"
               placeholder="e.g. Quantum Analytics Dashboard"
-              value={form.title} 
-              onChange={e => setForm({...form, title: e.target.value})} 
+              value={form.title}
+              onChange={e => setForm({...form, title: e.target.value})}
             />
           </div>
 
           <div className="form-group">
             <label className="form-label"><Tag size={14} style={{ marginRight: 8 }} /> Description</label>
-            <textarea 
+            <textarea
               required
               className="premium-textarea"
               placeholder="Explain your mission, the tech stack, and why people should join you..."
-              value={form.description} 
-              onChange={e => setForm({...form, description: e.target.value})} 
+              value={form.description}
+              onChange={e => setForm({...form, description: e.target.value})}
             />
           </div>
 
@@ -92,9 +104,9 @@ export default function CreateProject() {
             <label className="form-label">Domain / Tech Stack</label>
             <div className="pills-container">
               {TAG_OPTIONS.map(tag => (
-                <button 
-                  type="button" 
-                  key={tag} 
+                <button
+                  type="button"
+                  key={tag}
                   onClick={() => toggle(tags, setTags, tag)}
                   className={`pill-btn ${tags.includes(tag) ? 'tag-active' : ''}`}
                 >
@@ -108,9 +120,9 @@ export default function CreateProject() {
             <label className="form-label"><Users size={14} style={{ marginRight: 8 }} /> Roles Needed</label>
             <div className="pills-container">
               {ROLE_OPTIONS.map(role => (
-                <button 
-                  type="button" 
-                  key={role} 
+                <button
+                  type="button"
+                  key={role}
                   onClick={() => toggle(roles, setRoles, role)}
                   className={`pill-btn ${roles.includes(role) ? 'role-active' : ''}`}
                 >
