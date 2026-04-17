@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
   Rocket, Trophy, Calendar, Users, Globe, Wifi, WifiOff,
-  Image as ImageIcon, Link, Upload, X, Check, Palette,
+  Link, Check, Palette,
   Hash, Briefcase, Loader2
 } from 'lucide-react';
 import './CreateHackathon.css'; // reuse same CSS
@@ -28,15 +27,10 @@ export default function EditHackathon() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const fileRef = useRef(null);
 
   const [form, setForm] = useState(null); // null = loading
   const [mode, setMode] = useState('Online');
   const [roles, setRoles] = useState([]);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [existingImageUrl, setExistingImageUrl] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [loading, setLoading] = useState(false);
 
   // Load existing document
@@ -58,7 +52,6 @@ export default function EditHackathon() {
       });
       setMode(data.mode || 'Online');
       setRoles(data.roles || []);
-      setExistingImageUrl(data.imageUrl || null);
     });
   }, [id, user, navigate]);
 
@@ -67,31 +60,7 @@ export default function EditHackathon() {
   const toggleRole = (role) =>
     setRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
 
-  const handleImage = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5 MB'); return; }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    setExistingImageUrl(null);
-    if (fileRef.current) fileRef.current.value = '';
-  };
-
-  const uploadImage = () => new Promise((resolve, reject) => {
-    if (!imageFile) return resolve(existingImageUrl ?? null);
-    const storageRef = ref(storage, `hackathons/${Date.now()}_${imageFile.name}`);
-    const task = uploadBytesResumable(storageRef, imageFile);
-    task.on('state_changed',
-      snap => setUploadProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-      reject,
-      async () => resolve(await getDownloadURL(task.snapshot.ref))
-    );
-  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,19 +70,6 @@ export default function EditHackathon() {
     try {
       console.log('Form Data:', form);
       console.log('Roles:', roles);
-      
-      let imageUrl = existingImageUrl;
-      if (imageFile) {
-        console.log('Attempting image upload...');
-        try {
-          imageUrl = await uploadImage();
-          console.log('Image uploaded successfully:', imageUrl);
-        } catch (uploadErr) {
-          console.error('Image upload failed (likely CORS):', uploadErr);
-          toast.error('Image upload failed. Storing hackathon without image.');
-          // Continue with existing image or null
-        }
-      }
 
       const payload = {
         title: form.title.trim(),
@@ -125,7 +81,6 @@ export default function EditHackathon() {
         bgColor: form.bgColor,
         mode,
         roles,
-        imageUrl,
         updatedAt: serverTimestamp(),
       };
       console.log('Updating Firestore document:', id, payload);
@@ -140,7 +95,6 @@ export default function EditHackathon() {
       toast.error(`Update failed: ${err.message}`);
     } finally {
       setLoading(false);
-      setUploadProgress(0);
       console.log('--- Edit Submission Ended ---');
     }
   };
@@ -152,7 +106,6 @@ export default function EditHackathon() {
   );
 
   const previewBg = form.bgColor || '#1e3a8a';
-  const displayImage = imagePreview || existingImageUrl;
 
   return (
     <div className="ch-page">
@@ -254,28 +207,7 @@ export default function EditHackathon() {
               </div>
             </div>
 
-            <div className="ch-group">
-              <label className="ch-label"><ImageIcon size={13} /> Invitation / Banner Image</label>
-              {displayImage ? (
-                <div className="ch-image-preview">
-                  <img src={displayImage} alt="Preview" />
-                  <button type="button" className="ch-image-remove" onClick={removeImage}><X size={16} /></button>
-                </div>
-              ) : (
-                <label className="ch-upload-zone">
-                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImage} />
-                  <Upload size={28} className="ch-upload-icon" />
-                  <span className="ch-upload-text">Click to upload or drag & drop</span>
-                  <span className="ch-upload-hint">PNG, JPG, WEBP — max 5 MB</span>
-                </label>
-              )}
-              {uploadProgress > 0 && uploadProgress < 100 && (
-                <div className="ch-progress-wrap">
-                  <div className="ch-progress-bar" style={{ width: `${uploadProgress}%` }} />
-                  <span>{uploadProgress}%</span>
-                </div>
-              )}
-            </div>
+
 
             <button type="submit" disabled={loading} className="ch-submit">
               {loading ? <><span className="ch-spinner" /> Saving…</> : <><Check size={17} /> Save Changes</>}
@@ -292,7 +224,6 @@ export default function EditHackathon() {
               <span className={`ch-mode-pill ${mode === 'Online' ? 'online' : 'offline'}`}>
                 {mode === 'Online' ? <Wifi size={11} /> : <WifiOff size={11} />} {mode}
               </span>
-              {displayImage && <img src={displayImage} className="ch-banner-img" alt="banner" />}
               <h3 className="ch-card-title">{form.title || 'Your Hackathon Title'}</h3>
             </div>
             <div className="ch-card-body">

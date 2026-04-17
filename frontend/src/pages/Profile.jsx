@@ -1,16 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import {
   Edit, Trophy, Calendar, Users, Globe, Wifi, WifiOff,
-  Rocket, ExternalLink, LayoutGrid, Plus, Loader2
+  Rocket, ExternalLink, LayoutGrid, Plus, Loader2, Trash2, FolderCode,
+  Tag, Clock
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import './Profile.css';
 
 function getInitials(name = '') {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
+}
+
+function SkeletonCard() {
+  return (
+    <div className="pf-skeleton-card">
+      <div className="pf-skeleton-banner" />
+      <div className="pf-skeleton-body">
+        <div className="pf-skeleton-line short" />
+        <div className="pf-skeleton-line" />
+        <div className="pf-skeleton-line" />
+        <div className="pf-skeleton-footer">
+          <div className="pf-skeleton-btn" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Profile() {
@@ -19,7 +37,9 @@ export default function Profile() {
   const { user: currentUser } = useAuth();
 
   const [hackathons, setHackathons] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loadingHack, setLoadingHack] = useState(true);
+  const [loadingProj, setLoadingProj] = useState(true);
   const [modeFilter, setModeFilter] = useState('All'); // 'All' | 'Online' | 'Offline'
   const [activeTab, setActiveTab] = useState('hackathons');
 
@@ -33,17 +53,62 @@ export default function Profile() {
   // Fetch this user's hackathons from Firestore
   useEffect(() => {
     if (!id) return;
-    const q = query(
+    const qHack = query(
       collection(db, 'hackathons'),
       where('creatorId', '==', id),
       orderBy('createdAt', 'desc')
     );
-    const unsub = onSnapshot(q,
+    const unsubHack = onSnapshot(qHack,
       snap => { setHackathons(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoadingHack(false); },
       err  => { console.error(err); setLoadingHack(false); }
     );
-    return () => unsub();
+
+    const qProj = query(
+      collection(db, 'projects'),
+      where('creatorId', '==', id),
+      orderBy('createdAt', 'desc')
+    );
+    const unsubProj = onSnapshot(qProj,
+      snap => { setProjects(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoadingProj(false); },
+      err  => { console.error(err); setLoadingProj(false); }
+    );
+
+    return () => { unsubHack(); unsubProj(); };
   }, [id]);
+
+  const handleDeleteHackathon = async (hackId) => {
+    if (!window.confirm('Are you sure you want to delete this hackathon? This action cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'hackathons', hackId));
+      toast.success('Hackathon deleted successfully');
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error('Failed to delete hackathon');
+    }
+  };
+
+  const handleDeleteProject = async (projId) => {
+    if (!window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'projects', projId));
+      toast.success('Project deleted successfully');
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error('Failed to delete project');
+    }
+  };
+
+  const handleToggleHackathonMode = async (hackId, currentMode) => {
+    if (!isOwner) return;
+    const newMode = currentMode === 'Online' ? 'Offline' : 'Online';
+    try {
+      await updateDoc(doc(db, 'hackathons', hackId), { mode: newMode });
+      toast.success(`Hackathon is now ${newMode}`);
+    } catch (err) {
+      console.error('Update error:', err);
+      toast.error('Failed to change mode');
+    }
+  };
 
   const filteredHackathons = hackathons.filter(h =>
     modeFilter === 'All' || h.mode === modeFilter
@@ -89,6 +154,14 @@ export default function Profile() {
             My Hackathons
             <span className="pf-tab-count">{hackathons.length}</span>
           </button>
+          <button
+            className={`pf-tab ${activeTab === 'projects' ? 'active' : ''}`}
+            onClick={() => setActiveTab('projects')}
+          >
+            <FolderCode size={15} />
+            My Projects
+            <span className="pf-tab-count">{projects.length}</span>
+          </button>
         </div>
       </div>
 
@@ -121,8 +194,8 @@ export default function Profile() {
 
             {/* Grid */}
             {loadingHack ? (
-              <div className="pf-loading">
-                <Loader2 size={26} className="pf-spinner" /> Loading hackathons…
+              <div className="pf-hack-grid">
+                {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
               </div>
             ) : filteredHackathons.length === 0 ? (
               <div className="pf-empty">
@@ -150,9 +223,21 @@ export default function Profile() {
                     >
                       {h.imageUrl && <img src={h.imageUrl} className="pf-hack-banner-img" alt="banner" />}
                       <div className="pf-hack-banner-overlay" />
-                      <span className={`pf-mode-pill ${h.mode === 'Online' ? 'online' : 'offline'}`}>
-                        {h.mode === 'Online' ? <Wifi size={10} /> : <WifiOff size={10} />} {h.mode}
-                      </span>
+                      
+                      {isOwner ? (
+                        <button 
+                          className={`pf-mode-pill pf-mode-toggle-btn ${h.mode === 'Online' ? 'online' : 'offline'}`}
+                          onClick={() => handleToggleHackathonMode(h.id, h.mode)}
+                          title="Click to toggle mode"
+                        >
+                          {h.mode === 'Online' ? <Wifi size={10} /> : <WifiOff size={10} />} {h.mode}
+                        </button>
+                      ) : (
+                        <span className={`pf-mode-pill ${h.mode === 'Online' ? 'online' : 'offline'}`}>
+                          {h.mode === 'Online' ? <Wifi size={10} /> : <WifiOff size={10} />} {h.mode}
+                        </span>
+                      )}
+                      
                       <h3 className="pf-hack-title">{h.title}</h3>
                     </div>
 
@@ -162,7 +247,7 @@ export default function Profile() {
 
                       <div className="pf-hack-meta">
                         {h.prizePool && (
-                          <div className="pf-meta-chip">
+                          <div className="pf-meta-chip prize">
                             <Trophy size={12} />
                             <span>{h.prizePool}</span>
                           </div>
@@ -192,16 +277,115 @@ export default function Profile() {
                         </div>
                       )}
 
-                      <div className="pf-hack-footer">
-                        {h.websiteUrl && (
-                          <a href={h.websiteUrl} target="_blank" rel="noreferrer" className="pf-link-btn">
-                            <Globe size={13} /> Website <ExternalLink size={11} />
-                          </a>
-                        )}
                         {isOwner && (
-                          <Link to={`/edit-hackathon/${h.id}`} className="pf-edit-hack-btn">
-                            <Edit size={13} /> Edit
-                          </Link>
+                          <div className="pf-hack-actions">
+                            <Link to={`/edit-hackathon/${h.id}`} className="pf-edit-hack-btn">
+                              <Edit size={13} /> Edit
+                            </Link>
+                            <button 
+                              onClick={() => handleDeleteHackathon(h.id)} 
+                              className="pf-delete-hack-btn"
+                              title="Delete Hackathon"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'projects' && (
+          <>
+            <div className="pf-section-header">
+              <h2 className="pf-section-title">Team Projects</h2>
+              {isOwner && (
+                <Link to="/create-project" className="pf-new-btn">
+                  <Plus size={14} /> New Project
+                </Link>
+              )}
+            </div>
+
+            {loadingProj ? (
+              <div className="pf-hack-grid">
+                {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="pf-empty">
+                <div className="pf-empty-icon"><FolderCode size={32} /></div>
+                <h3>No projects yet</h3>
+                <p>
+                  {isOwner
+                    ? 'You haven\'t posted any team projects yet.'
+                    : 'This user hasn\'t posted any projects yet.'}
+                </p>
+                {isOwner && (
+                  <Link to="/create-project" className="pf-create-btn" style={{ marginTop: 16 }}>
+                    <Plus size={14} /> Post Project
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="pf-hack-grid">
+                {projects.map(p => (
+                  <div key={p.id} className="pf-hack-card pf-project-card">
+                    <div className="pf-hack-banner pf-project-banner">
+                      <div className="pf-hack-banner-glass" />
+                      <div className="pf-project-tag-float">Team Project</div>
+                      <h3 className="pf-hack-title">{p.title}</h3>
+                    </div>
+                    <div className="pf-hack-body">
+                      {p.tags?.length > 0 && (
+                        <div className="pf-project-tags">
+                          {p.tags.map(tag => (
+                            <span key={tag} className="pf-project-tag">
+                              <Tag size={10} /> {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <p className="pf-hack-desc">{p.description}</p>
+                      
+                      {p.rolesNeeded?.length > 0 && (
+                        <div className="pf-project-roles">
+                          <span className="pf-roles-label">Recruiting:</span>
+                          <div className="pf-roles-list">
+                            {p.rolesNeeded.slice(0, 3).map(role => (
+                              <span key={role} className="pf-role-badge pf-project-role">{role}</span>
+                            ))}
+                            {p.rolesNeeded.length > 3 && (
+                              <span className="pf-role-badge pf-role-more">+{p.rolesNeeded.length - 3}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="pf-hack-footer">
+                        <div className="pf-project-meta">
+                          <span className="pf-project-slots">
+                             {p.rolesNeeded?.length || 0} Open Roles
+                          </span>
+                          {p.createdAt?.toDate && (
+                            <span className="pf-project-date">
+                               <Clock size={11} /> {new Date(p.createdAt.toDate()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                        {isOwner && (
+                          <div className="pf-hack-actions">
+                            <button 
+                              onClick={() => handleDeleteProject(p.id)} 
+                              className="pf-delete-hack-btn"
+                              title="Delete Project"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

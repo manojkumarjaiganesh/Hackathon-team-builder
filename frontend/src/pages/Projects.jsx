@@ -233,7 +233,6 @@ export default function Projects() {
               >
                 {/* coloured banner */}
                 <div className="hack-card-header" style={{ background: hack.gradient }}>
-                  {hack.imageUrl && <img src={hack.imageUrl} className="hack-card-bg-img" alt="banner" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4 }} />}
                   <div className="hack-card-header-shine" />
                   <span className={`status-pill ${hack.category === 'Ongoing' ? 'status-live' : 'status-soon'}`}>
                     {hack.category === 'Ongoing' ? '🔴 Live' : '🟡 Soon'}

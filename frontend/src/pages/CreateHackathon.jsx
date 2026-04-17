@@ -1,14 +1,13 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { getAuth } from "firebase/auth";
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
   Rocket, Trophy, Calendar, Users, Globe, Wifi, WifiOff,
-  Image as ImageIcon, Link, Upload, X, Check, Palette,
+  Link, Check, Palette,
   Hash, Briefcase, Loader2
 } from 'lucide-react';
 import './CreateHackathon.css';
@@ -28,7 +27,6 @@ const PRESET_COLORS = [
 export default function CreateHackathon() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const fileRef = useRef(null);
 
   console.log('[CreateHackathon] Render. User:', user?.uid, 'AuthLoading:', authLoading);
 
@@ -43,9 +41,6 @@ export default function CreateHackathon() {
   });
   const [mode, setMode] = useState('Online');
   const [roles, setRoles] = useState([]);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
@@ -53,49 +48,7 @@ export default function CreateHackathon() {
   const toggleRole = (role) =>
     setRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
 
-  const handleImage = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5 MB'); return; }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    if (fileRef.current) fileRef.current.value = '';
-  };
-
-
-const uploadImage = () => new Promise((resolve, reject) => {
-  const auth = getAuth();
-
-  console.log("🔥 Firebase user:", auth.currentUser);
-
-  if (!auth.currentUser) {
-    reject(new Error("User not authenticated"));
-    return;
-  }
-
-  if (!imageFile) return resolve(null);
-
-  const storageRef = ref(storage, `hackathons/${Date.now()}_${imageFile.name}`);
-  const task = uploadBytesResumable(storageRef, imageFile);
-
-  task.on(
-    'state_changed',
-    snap => setUploadProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-    (error) => {
-      console.error("❌ Upload error FULL:", error);
-      reject(error);
-    },
-    async () => {
-      const url = await getDownloadURL(task.snapshot.ref);
-      resolve(url);
-    }
-  );
-});
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -110,19 +63,6 @@ const uploadImage = () => new Promise((resolve, reject) => {
     try {
       console.log('Form Data:', form);
       console.log('Roles:', roles);
-      
-      let imageUrl = null;
-      if (imageFile) {
-        console.log('Attempting image upload...');
-        try {
-          imageUrl = await uploadImage();
-          console.log('Image uploaded successfully:', imageUrl);
-        } catch (uploadErr) {
-          console.error('Image upload failed (likely CORS):', uploadErr);
-          toast.error('Image upload failed. Storing hackathon without image.');
-          // Continue without image
-        }
-      }
 
       const payload = {
         title: form.title.trim(),
@@ -134,7 +74,6 @@ const uploadImage = () => new Promise((resolve, reject) => {
         bgColor: form.bgColor,
         mode,
         roles,
-        imageUrl,
         creatorId: user?.uid,
         creatorName: user?.displayName || user?.email || 'Anonymous',
         createdAt: serverTimestamp(),
@@ -151,7 +90,6 @@ const uploadImage = () => new Promise((resolve, reject) => {
       toast.error(`Error: ${err.message}`);
     } finally {
       setLoading(false);
-      setUploadProgress(0);
       console.log('--- Submission Ended ---');
     }
   };
@@ -319,37 +257,7 @@ const uploadImage = () => new Promise((resolve, reject) => {
               </div>
             </div>
 
-            {/* Image upload */}
-            <div className="ch-group">
-              <label className="ch-label"><ImageIcon size={13} /> Invitation / Banner Image</label>
-              {imagePreview ? (
-                <div className="ch-image-preview">
-                  <img src={imagePreview} alt="Preview" />
-                  <button type="button" className="ch-image-remove" onClick={removeImage}>
-                    <X size={16} />
-                  </button>
-                </div>
-              ) : (
-                <label className="ch-upload-zone">
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleImage}
-                  />
-                  <Upload size={28} className="ch-upload-icon" />
-                  <span className="ch-upload-text">Click to upload or drag & drop</span>
-                  <span className="ch-upload-hint">PNG, JPG, WEBP — max 5 MB</span>
-                </label>
-              )}
-              {uploadProgress > 0 && uploadProgress < 100 && (
-                <div className="ch-progress-wrap">
-                  <div className="ch-progress-bar" style={{ width: `${uploadProgress}%` }} />
-                  <span>{uploadProgress}%</span>
-                </div>
-              )}
-            </div>
+
 
             {/* Submit */}
             <button type="submit" disabled={loading} className="ch-submit">
@@ -370,7 +278,6 @@ const uploadImage = () => new Promise((resolve, reject) => {
               <span className={`ch-mode-pill ${mode === 'Online' ? 'online' : 'offline'}`}>
                 {mode === 'Online' ? <Wifi size={11} /> : <WifiOff size={11} />} {mode}
               </span>
-              {imagePreview && <img src={imagePreview} className="ch-banner-img" alt="banner" />}
               <h3 className="ch-card-title">{form.title || 'Your Hackathon Title'}</h3>
             </div>
             <div className="ch-card-body">
